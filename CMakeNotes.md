@@ -1,7 +1,10 @@
 ### Introduce
+
 CMake是一个跨平台的安装（编译）工具，可以用简单的语句来描述所有平台的安装(编译过程)。他能够输出各种各样的makefile或者project文件，能测试编译器所支持的C++特性,类似UNIX下的automake。只是 CMake 的组态档取名为 CMakeLists.txt。Cmake 并不直接建构出最终的软件，而是产生标准的建构档（如 Unix 的 Makefile 或 Windows Visual C++ 的 projects/workspaces），然后再依一般的建构方式使用。这使得熟悉某个集成开发环境（IDE）的开发者可以用标准的方式建构他的软件，这种可以使用各平台的原生建构系统的能力是 CMake 和 SCons 等其他类似系统的区别之处。
 
 ### Step 1 基础示例
+
+#### 1、基本内容（版本号、工程名、可执行文件）
 
 最基本的项目是由源代码文件构建的可执行文件。对于简单的项目，首先创建一个工程文件夹 TutorialPro ,在其文件夹下可以创建一个CMakelists.txt文件。
 
@@ -19,7 +22,7 @@ add_executable(Tutorial tutorial.cxx)
 
 ```
 
-#### 添加版本号和配置头文件
+#### 2、添加版本号和配置头文件
 
 使用 project 命令设置工程名和版本号。
 
@@ -75,7 +78,7 @@ if (argc < 2) {
 }
 ```
 
-#### 指定 C++ 标准
+#### 3、指定 C++ 标准
 
 通过在 tutorial.cxx 中用 std:stod 替换 atof 来添加一些 c++ 11 特性到我们的项目中。同时，删除tinclude (cstdlib)。
 
@@ -100,7 +103,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 ```
 
-#### 构建和测试
+#### 4、构建和测试
 
 运行 cmake 可执行文件或 cmake-gui 来配置项目，然后使用您选择的构建工具来构建它。例如，从命令行，我们可以切换到 tutorial 工程目录下创建一个 bulid 目录。
 
