@@ -19,9 +19,16 @@ project(Tutorial)
 
 # 添加可执行文件
 add_executable(Tutorial tutorial.cxx)
-
 ```
-
+##### 命令解析
+```cmake
+project(Tutorial)
+```
+CMake 构建包含了一个项目名称，会自动生成一些变量，比如：PROJECT_NAME 这个变量，PROJECT_NAME 为变量名，${PROJECT_NAME}为变量值，为 Tutorial。
+```cmake
+add_executable(Tutorial tutorial.cxx)
+```
+add_executable 命令是指定某些源文件生成可执行文件，第一个参数是可执行文件名，第二个参数是要编译的源文件列表。
 #### 2、添加版本号和配置头文件
 
 使用 project 命令设置工程名和版本号。
