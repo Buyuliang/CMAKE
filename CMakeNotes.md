@@ -111,7 +111,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 ```
 
 #### 4、构建和测试
+如果搭建的是 windows 的编译环境需要安装 CMake 和 MinGW 工具 [配置环境]
+```cmake
 
+set(CMAKE_C_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")
+set(CMAKE_CXX_COMPILER "g++")#设置C++编译器  
+set(CMAKE_CXX_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")  
+```
 运行 cmake 可执行文件或 cmake-gui 来配置项目，然后使用您选择的构建工具来构建它。例如，从命令行，我们可以切换到 tutorial 工程目录下创建一个 bulid 目录。
 
 ```c
