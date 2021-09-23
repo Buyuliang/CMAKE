@@ -218,3 +218,42 @@ target_include_directories(Tutorial PUBLIC
 cmake ../TutorialPro -D USE_MYMATH=OFF
 ```
 
+### Step 3 添加库的使用要求
+
+#### 1、主要命令
+
+```cmake
+target_compile_definitions()
+
+target_compile_options()
+
+target_include_directories()
+
+target_link_libraries()
+```
+
+任何链接到 MathFunctions 的都需要包含当前源目录，而 MathFunctions 本身不需要。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+target_include_directories(MathFunctions
+          INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+          )
+```
+
+**CMakeLists.txt**
+
+```cmake
+if(USE_MYMATH)
+  add_subdirectory(MathFunctions)
+  list(APPEND EXTRA_LIBS MathFunctions)
+endif()
+
+target_include_directories(Tutorial PUBLIC
+                           "${PROJECT_BINARY_DIR}"
+                           )
+```
+
+然后使用 cmake 执行或者 使用 cmake-gui 配置工程然后构建它。
+
