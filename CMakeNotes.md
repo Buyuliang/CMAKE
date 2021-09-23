@@ -132,3 +132,89 @@ Tutorial 10
 Tutorial
 ```
 
+### Step 2 添加库
+
+#### 1、使用 add_library 添加库
+
+例：我们将把库放到名为MathFunctions的子目录中。该目录已经包含了一个头文件MathFunctions.h，以及一个源文件 mysgrt.cxx。源文件有一个名为 mysgrt 的函数，它提供了与编译器的 sart 函数类似的功能。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+add_library(MathFunctions mysqrt.cxx)
+```
+
+#### 2、添加库到可执行文件
+
+为了使用这个新库，我们将在上层 CMakelists 中添加一个 add_subdirectory 去调用 CMakeLists.txt 文件。我们将新库添加到可执行文件中，并将 MathFunctions 添加为包含目录，以便可以找到 mysçrt.h 头文件。
+
+**CMakeLists.txt**
+
+```cmake
+# 添加 MathFunctions library
+add_subdirectory(MathFunctions)
+
+# 添加可执行文件
+add_executable(Tutorial tutorial.cxx)
+
+target_link_libraries(Tutorial PUBLIC MathFunctions)
+
+# 添加文件路径到二进制树以便于找到 TutorialConfig.h
+target_include_directories(Tutorial PUBLIC
+                          "${PROJECT_BINARY_DIR}"
+                          "${PROJECT_SOURCE_DIR}/MathFunctions"
+                          )
+```
+
+#### 3、设置库为可选择
+
+将 MathFunctions 库设置为可选的。第一步是在上级 CMakeLists.txt 文件中添加一个选项。
+
+**CMakeLists.txt**
+
+```cmake
+option(USE_MYMATH "Use tutorial provided math implementation" ON)
+
+# 配置一个头文件来传递源代码中的一些 CMake 设置
+configure_file(TutorialConfig.h.in TutorialConfig.h)
+
+if(USE_MYMATH)
+  add_subdirectory(MathFunctions)
+  list(APPEND EXTRA_LIBS MathFunctions)
+  list(APPEND EXTRA_INCLUDES "${PROJECT_SOURCE_DIR}/MathFunctions")
+endif()
+
+# 添加可执行文件
+add_executable(Tutorial tutorial.cxx)
+
+target_link_libraries(Tutorial PUBLIC ${EXTRA_LIBS})
+
+# 添加文件路径到二进制树以便于找到 TutorialConfig.h
+target_include_directories(Tutorial PUBLIC
+                           "${PROJECT_BINARY_DIR}"
+                           ${EXTRA_INCLUDES}
+                           )
+```
+
+**tutorial.cxx**
+
+```cmake
+#ifdef USE_MYMATH
+  const double outputValue = mysqrt(inputValue);
+#else
+  const double outputValue = sqrt(inputValue);
+#endif
+```
+
+**TutorialConfig.h.in**
+
+```cmake
+#cmakedefine USE_MYMATH
+```
+
+现在让我们更新USE MYMATH的值。最简单的方法是使用 cmake-gui 或 cmake，如果你在终端。或者，如果您想要从命令行更改该选项，可以尝试：
+
+```cmake
+cmake ../TutorialPro -D USE_MYMATH=OFF
+```
+
