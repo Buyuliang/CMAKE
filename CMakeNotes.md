@@ -20,15 +20,21 @@ project(Tutorial)
 # 添加可执行文件
 add_executable(Tutorial tutorial.cxx)
 ```
+
 ##### 命令解析
+
 ```cmake
 project(Tutorial)
 ```
+
 CMake 构建包含了一个项目名称，会自动生成一些变量，比如：PROJECT_NAME 这个变量，PROJECT_NAME 为变量名，${PROJECT_NAME}为变量值，为 Tutorial。
+
 ```cmake
 add_executable(Tutorial tutorial.cxx)
 ```
+
 add_executable 命令是指定某些源文件生成可执行文件，第一个参数是可执行文件名，第二个参数是要编译的源文件列表。
+
 #### 2、添加版本号和配置头文件
 
 使用 project 命令设置工程名和版本号。
@@ -46,6 +52,7 @@ project(Tutorial VERSION 1.0)
 配置头文件，将版本号传递给源代码。
 
 ```cmake
+# 配置一个头文件来传递源代码中的一些 CMake 设置
 configure_file(TutorialConfig.h.in TutorialConfig.h)
 ```
 
@@ -63,8 +70,8 @@ target_include_directories(Tutorial PUBLIC
 
 ```cmake
 // the configured options and settings for Tutorial
-#define Tutorial_VERSION_MAJOR @Tutorial_VERSION_MAJOR@
-#define Tutorial_VERSION_MINOR @Tutorial_VERSION_MINOR@
+#define Tutorial_VERSION_MAJOR X	//@Tutorial_VERSION_MAJOR@
+#define Tutorial_VERSION_MINOR X	//@Tutorial_VERSION_MINOR@
 ```
 
 当CMake配置这个头文件时，@Tutorial_VERSION_MAJOR@ 和 @Tutorial_VERSION_MINOR@ 的值将被替换。
@@ -76,12 +83,18 @@ target_include_directories(Tutorial PUBLIC
 **tutorial.cxx** 
 
 ```c++
-if (argc < 2) {
-    // report version
-    std::cout << argv[0] << " Version " << Tutorial_VERSION_MAJOR << "."
-              << Tutorial_VERSION_MINOR << std::endl;
-    std::cout << "Usage: " << argv[0] << " number" << std::endl;
-    return 1;
+#include <iostream>
+#include <TutorialConfig.h>
+
+ int main(int argc, char* argv[])
+{
+	if (argc < 2) {
+		// report version
+		std::cout << argv[0] << " Version " << Tutorial_VERSION_MAJOR << "."
+				  << Tutorial_VERSION_MINOR << std::endl;
+		std::cout << "Usage: " << argv[0] << " number" << std::endl;
+		return 1;
+	}
 }
 ```
 
@@ -111,13 +124,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 ```
 
 #### 4、构建和测试
-如果搭建的是 windows 的编译环境需要安装 CMake 和 MinGW 工具 [配置环境]
-```cmake
 
+如果搭建的是 windows 的编译环境需要安装 CMake 和 MinGW 工具 [配置环境]
+
+```cmake
 set(CMAKE_C_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")
-set(CMAKE_CXX_COMPILER "g++")#设置C++编译器  
+set(CMAKE_CXX_COMPILER "g++")	#设置C++编译器  
 set(CMAKE_CXX_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")  
 ```
+
 运行 cmake 可执行文件或 cmake-gui 来配置项目，然后使用您选择的构建工具来构建它。例如，从命令行，我们可以切换到 tutorial 工程目录下创建一个 bulid 目录。
 
 ```c
@@ -128,38 +143,47 @@ mkdir build
 
 ```c++
 cd build
-cmake ../TutorialPro 
+cmake -G "MinGW Makefiles" ../../TutorialPro 
 ```
 
 然后调用构建系统来实际编译/链接项目。
 
 ```cmake
-cmake --build 
+make
 ```
 
 使用以下命令运行
 
 ```c++
-Tutorial 4294967296
-Tutorial 10
-Tutorial
+./Tutorial.exe
 ```
 
 ### Step 2 添加库
 
 #### 1、使用 add_library 添加库
 
-例：我们将把库放到名为MathFunctions的子目录中。该目录已经包含了一个头文件MathFunctions.h，以及一个源文件 mysgrt.cxx。源文件有一个名为 mysgrt 的函数，它提供了与编译器的 sart 函数类似的功能。
+例：我们将把库放到名为MathFunctions的子目录中。该目录已经包含了一个头文件MathFunctions.h，以及一个源文件 mysqrt.cxx。源文件有一个名为 mysqrt 的函数，它提供了与编译器的 sqrt 函数类似的功能。
 
 **MathFunctions/CMakeLists.txt**
 
 ```cmake
+# 设置 cmake 最小版本号
+cmake_minimum_required(VERSION 3.10)
+
+# 设置工程名
+project(MathFunctions)
+message(${PROJECT_BINARY_DIR})
 add_library(MathFunctions mysqrt.cxx)
+
+target_include_directories(MathFunctions PUBLIC
+                          "${PROJECT_BINARY_DIR}"
+                          "${PROJECT_SOURCE_DIR}"
+                          )
 ```
 
 #### 2、添加库到可执行文件
 
-为了使用这个新库，我们将在上层 CMakelists 中添加一个 add_subdirectory 去调用 CMakeLists.txt 文件。我们将新库添加到可执行文件中，并将 MathFunctions 添加为包含目录，以便可以找到 mysçrt.h 头文件。
+为了使用这个新库，我们将在上层 CMakeLists 中添加一个 add_subdirectory 去调用 CMakeLists.txt 文件。我们将新库添加到可执行文件中，并将 MathFunctions 添加为包含目录，以便可以找到 mysqrt.h 头文件。
 
 **CMakeLists.txt**
 
@@ -213,9 +237,11 @@ target_include_directories(Tutorial PUBLIC
 
 ```cmake
 #ifdef USE_MYMATH
-  const double outputValue = mysqrt(inputValue);
+	const double outputValue = mysqrt(inputValue);
+	std::cout << "mysqrt: " << outputValue << std::endl;
 #else
-  const double outputValue = sqrt(inputValue);
+	const double outputValue = sqrt(inputValue);
+	std::cout << "sqrt: " << outputValue << std::endl;
 #endif
 ```
 
@@ -228,7 +254,7 @@ target_include_directories(Tutorial PUBLIC
 现在让我们更新USE MYMATH的值。最简单的方法是使用 cmake-gui 或 cmake，如果你在终端。或者，如果您想要从命令行更改该选项，可以尝试：
 
 ```cmake
-cmake ../TutorialPro -D USE_MYMATH=OFF
+$ cmake -G "MinGW Makefiles" ../../TutorialPro  -D USE_MYMATH=OFF
 ```
 
 ### Step 3 添加库的使用要求
@@ -245,7 +271,7 @@ target_include_directories()
 target_link_libraries()
 ```
 
-任何链接到 MathFunctions 的都需要包含当前源目录，而 MathFunctions 本身不需要。
+任何链接到 `MathFunctions` 的都需要包含当前源目录，而 `MathFunctions `本身不需要。
 
 **MathFunctions/CMakeLists.txt**
 
@@ -269,4 +295,137 @@ target_include_directories(Tutorial PUBLIC
 ```
 
 然后使用 cmake 执行或者 使用 cmake-gui 配置工程然后构建它。
+
+### Step 4 安装和测试
+
+#### 1、安装规则
+
+对于` MathFunctions `我们想要安装 `library `和 `header` 文件，对于应用程序我们想要安装可执行文件和配置头文件。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+install(TARGETS MathFunctions DESTINATION lib)
+install(FILES MathFunctions.h DESTINATION include)
+```
+
+在最上层 `CMakeLists.txt` 中添加
+
+**CMakeLists.txt**
+
+```cmake
+install(TARGETS Tutorial DESTINATION bin)
+install(FILES "${PROJECT_BINARY_DIR}/TutorialConfig.h"
+  DESTINATION include
+  )
+```
+
+安装命令
+
+```
+cmake --install .
+```
+
+CMake 变量 `CIAKE ISTALL PREFI` 用于确定文件安装的根目录。如果使用 `cmake--install `命令，安装前缀可以通过 `-prefix` 参数被覆盖。例如
+
+```
+cmake --install . --prefix "/home/myuser/installdir"
+```
+
+#### 2、测试
+
+接下来让我们测试应用程序。在最上层` CMakelists.txt` 的最后，我们可以启用测试，然后添加一些基本测试，以验证应用程序是否正常工作。
+
+**CMakeLists.txt**
+
+```cmake
+enable_testing()
+
+# does the application run
+add_test(NAME Runs COMMAND Tutorial 25)
+
+# does the usage message work?
+add_test(NAME Usage COMMAND Tutorial)
+set_tests_properties(Usage
+  PROPERTIES PASS_REGULAR_EXPRESSION "Usage:.*number"
+  )
+
+# define a function to simplify adding tests
+function(do_test target arg result)
+  add_test(NAME Comp${arg} COMMAND ${target} ${arg})
+  set_tests_properties(Comp${arg}
+    PROPERTIES PASS_REGULAR_EXPRESSION ${result}
+    )
+endfunction(do_test)
+
+# do a bunch of result based tests
+do_test(Tutorial 4 "4 is 2")
+do_test(Tutorial 9 "9 is 3")
+do_test(Tutorial 5 "5 is 2.236")
+do_test(Tutorial 7 "7 is 2.645")
+do_test(Tutorial 25 "25 is 5")
+do_test(Tutorial -25 "-25 is [-nan|nan|0]")
+do_test(Tutorial 0.0001 "0.0001 is 0.01")
+```
+
+- 第一个测试只是验证应用程序是否运行，没有出现段错误或崩溃，并且返回值为零。这是`CTest`测试的基本形式。
+
+- 第二个测试使用 `PASS RECILAR EXPRESSION` 测试属性来验证测试的输出是否包含某些字符串。
+- 验证当提供的参数数量不正确时是否打印使用消息。最后，我们有一个名为 `do_test` 的函数，它运行应用程序并验证计算出的平方根对于给定输入是否正确。
+- 对于` do_test` 的每次调用，都会根据传入的参数将另一个测试添加到项目中，其中包含名称、输入和预期结果。
+- 重新构建应用程序，然后cd到二进制目录并运行`ctest`可执行文件: `ctest -N` 和 `ctest -vv` 。对于多配置生成器(例如Visual Studio)，必须指定配置类型。例如，在 `build` 目录使用 `ctest -C Debug -VV` (而不是调试子目录!)中使用`ctest Debug -vv`。或者，从IDE构建 `RUN_TESTS` 目标。
+
+### Step 5 
+
+如果平台有 `log` 和 `exp`，那么我们将在 `mysqrt` 函数中使用它们来计算平方根。我们首先使用`MathFunctions/CMakelists.txt` 中的` CheckSymbolExists `模块测试这些函数的可用性。在一些平台上，我们需要链接到`m` 库。如果最初没有找到` log` 和` exp`，需要` m` 库，然后再试一次。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+include(CheckSymbolExists)
+check_symbol_exists(log "math.h" HAVE_LOG)
+check_symbol_exists(exp "math.h" HAVE_EXP)
+if(NOT (HAVE_LOG AND HAVE_EXP))
+  unset(HAVE_LOG CACHE)
+  unset(HAVE_EXP CACHE)
+  set(CMAKE_REQUIRED_LIBRARIES "m")
+  check_symbol_exists(log "math.h" HAVE_LOG)
+  check_symbol_exists(exp "math.h" HAVE_EXP)
+  if(HAVE_LOG AND HAVE_EXP)
+    target_link_libraries(MathFunctions PRIVATE m)
+  endif()
+endif()
+```
+
+如果可用，使用 `target_compile_definitions()` 指定 `HAVE_LOG`  和 `HAVE_EXP`  做为私有编译定义。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+if(HAVE_LOG AND HAVE_EXP)
+  target_compile_definitions(MathFunctions
+                             PRIVATE "HAVE_LOG" "HAVE_EXP")
+endif()
+```
+
+如果 `log`  和 `exp` 在系统上可用，那么我们将在`mysart`函数中使用它们来计算平方根。在`MathFunctions/mysqrt`中添加以下代码到`mysqrt`函数。
+
+**MathFunctions/mysqrt.cxx**
+
+```c++
+#if defined(HAVE_LOG) && defined(HAVE_EXP)
+  double result = exp(log(x) * 0.5);
+  std::cout << "Computing sqrt of " << x << " to be " << result
+            << " using log and exp" << std::endl;
+#else
+  double result = x;
+```
+
+添加`cmath`头文件
+
+**MathFunctions/mysqrt.cxx**
+
+```c++
+#include <cmath>
+```
 
