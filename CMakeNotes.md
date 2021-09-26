@@ -429,3 +429,318 @@ endif()
 #include <cmath>
 ```
 
+### Step 6 添加自定义命令和生成文件
+
+首先移除`MathFunctions/CMakeLists.txt`中 `log`和`exp函数`，然后从`mysqrt.cxx`中移除``HAVE_LOG` ``和`HAVE_EXP `，同时也移除`#include <cmath>`，在``MathFunctions`目录下，新建一个`MakeTable.cxx` 文件
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+add_executable(MakeTable MakeTable.cxx)
+```
+
+然后，我们添加一个自定义命令，指定如何通过运行MakeTable生成Table.h。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  COMMAND MakeTable ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  DEPENDS MakeTable
+  )
+```
+
+接下来我们必须让`CMake`知道`mysqrt.cxx`依赖于生成的文件`Table.h`，这是通过添加生成的`Table`来完成的`Table.h`到库`MathFunctions`的源代码列表。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+add_library(MathFunctions
+            mysqrt.cxx
+            ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+            )
+```
+
+我们还必须将当前的二进制目录添加到包含目录列表中，以便`Table.h`可以被`mysart.cxx`找到并包含。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+target_include_directories(MathFunctions
+          INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+          PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
+          )
+```
+
+现在让我们使用生成的表。首先,修改`mysqrt.cxx`包含`Table.h`接下来，我们可以重写`mysqrt`函数来使用这个表
+
+**MathFunctions/mysqrt.cxx**
+
+```cmake
+double mysqrt(double x)
+{
+  if (x <= 0) {
+    return 0;
+  }
+
+  // use the table to help find an initial value
+  double result = x;
+  if (x >= 1 && x < 10) {
+    std::cout << "Use the table to help find an initial value " << std::endl;
+    result = sqrtTable[static_cast<int>(x)];
+  }
+
+  // do ten iterations
+  for (int i = 0; i < 10; ++i) {
+    if (result <= 0) {
+      result = 0.1;
+    }
+    double delta = x - (result * result);
+    result = result + 0.5 * delta / result;
+    std::cout << "Computing sqrt of " << x << " to be " << result << std::endl;
+  }
+
+  return result;
+}
+```
+
+### Step 7 打包安装程序
+
+接下来假设我们想要将我们的项目分发给其他人，以便他们能够使用它。我们希望在各种平台上提供二进制和源代码发行版。这与我们之前在安装和测试中所做的安装略有不同，在安装中我们安装了从源代码构建的二进制文件。在这个例子中，我们将构建支持二进制安装和包管理特性的安装包。为此，我们将使用cppack创建特定于平台的安装程序。具体来说，我们需要在最上级`cmakelist.txt`的底部添加几行代码文件
+
+**CMakeLists.txt**
+
+```cmake
+include(InstallRequiredSystemLibraries)
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+set(CPACK_PACKAGE_VERSION_MAJOR "${Tutorial_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${Tutorial_VERSION_MINOR}")
+include(CPack)
+```
+
+CPack变量设置为存储该项目的许可和版本信息的位置。
+
+最后，我们将包含CPack模块，该模块将使用这些变量和当前系统的一些其他属性来设置安装程序。下一步是以通常的方式构建项目，然后运行cpack可执行文件。要构建一个二进制发行版，从二进制目录运行:
+
+```
+cpack
+```
+
+要指定生成器，可以使用`-G`选项。对于多配置构建，使用`-c`来指定配置。
+
+```
+cpack -G ZIP -C Debug
+```
+
+创建一个源代码发行版本
+
+```
+cpack --config CPackSourceConfig.cmake
+```
+
+### Step 8 添加测试支持
+
+**CMakeLists.txt**
+
+```cmake
+# enable testing
+enable_testing()
+
+# enable dashboard scripting
+include(CTest)
+```
+
+CTest模块将自动调用`enable_testing()`，因此我们可以从CMake文件中删除它。我们还需要创建一个`CTestconfig.cmake`，在顶级目录中，我们可以指定项目的名称和提交测试的位置。
+
+**CTestConfig.cmake**
+
+```camke
+set(CTEST_PROJECT_NAME "CMakeTutorial")
+set(CTEST_NIGHTLY_START_TIME "00:00:00 EST")
+
+set(CTEST_DROP_METHOD "http")
+set(CTEST_DROP_SITE "my.cdash.org")
+set(CTEST_DROP_LOCATION "/submit.php?project=CMakeTutorial")
+set(CTEST_DROP_SITE_CDASH TRUE)
+```
+
+```
+ctest [-VV] -D Experimental
+```
+
+对于多配置生成器(例如Visual Studio)，必须指定配置类型:
+
+```
+ctest [-VV] -C Debug -D Experimental
+```
+
+### Step 9 选择静态或共享库
+
+在本节中，我们将展示如何使用`BUILD_SHARED_LIBS`变量来控制`add_library()`的默认行为，并允许控制如何构建没有显式类型(STATIC、SHARED、MODULE或OBJECT)的库。
+
+为此，我们需要将`BUILD_SHARED_LIBS`添加到顶级`CMakeLists.txt`中。三种。我们使用`option()`命令，因为它允许用户选择值是`ON`还是`OFF`。接下来，我们将重构`MathFunctions`，使其成为一个使用`mysqrt`或`sqrt`封装的真正的库，而不需要调用代码来实现这个逻辑。这也意味着`USE_MYMATH`将不控制构建`MathFunctions`。
+
+**CMakeLists.txt**
+
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+# set the project name and version
+project(Tutorial VERSION 1.0)
+
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# control where the static and shared libraries are built so that on windows
+# we don't need to tinker with the path to run the executable
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+
+# configure a header file to pass the version number only
+configure_file(TutorialConfig.h.in TutorialConfig.h)
+
+# add the MathFunctions library
+add_subdirectory(MathFunctions)
+
+# add the executable
+add_executable(Tutorial tutorial.cxx)
+target_link_libraries(Tutorial PUBLIC MathFunctions)
+```
+
+现在我们已经使`MathFunctions`始终被使用，接下来需要更新该库的逻辑。所以,在`MathFunctions / CMakelists`，我们需要创建一个`SqrtLibrary`，当启用`USE_MYMATH`时，有条件地构建和安装它。现在，我们将显式要求静态构建`SqrtLibrary`。
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+# add the library that runs
+add_library(MathFunctions MathFunctions.cxx)
+
+# state that anybody linking to us needs to include the current source dir
+# to find MathFunctions.h, while we don't.
+target_include_directories(MathFunctions
+                           INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+                           )
+
+# should we use our own math functions
+option(USE_MYMATH "Use tutorial provided math implementation" ON)
+if(USE_MYMATH)
+
+  target_compile_definitions(MathFunctions PRIVATE "USE_MYMATH")
+
+  # first we add the executable that generates the table
+  add_executable(MakeTable MakeTable.cxx)
+
+  # add the command to generate the source code
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+    COMMAND MakeTable ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+    DEPENDS MakeTable
+    )
+
+  # library that just does sqrt
+  add_library(SqrtLibrary STATIC
+              mysqrt.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+              )
+
+  # state that we depend on our binary dir to find Table.h
+  target_include_directories(SqrtLibrary PRIVATE
+                             ${CMAKE_CURRENT_BINARY_DIR}
+                             )
+
+  target_link_libraries(MathFunctions PRIVATE SqrtLibrary)
+endif()
+
+# define the symbol stating we are using the declspec(dllexport) when
+# building on windows
+target_compile_definitions(MathFunctions PRIVATE "EXPORTING_MYMATH")
+
+# install rules
+set(installable_libs MathFunctions)
+if(TARGET SqrtLibrary)
+  list(APPEND installable_libs SqrtLibrary)
+endif()
+install(TARGETS ${installable_libs} DESTINATION lib)
+install(FILES MathFunctions.h DESTINATION include)
+```
+
+**MathFunctions/mysqrt.cxx**
+
+```c++
+#include <iostream>
+
+#include "MathFunctions.h"
+
+// include the generated table
+#include "Table.h"
+
+namespace mathfunctions {
+	namespace detail {
+        // a hack square root calculation using simple operations
+        double mysqrt(double x)
+        {
+          if (x <= 0) {
+            return 0;
+          }
+
+          // use the table to help find an initial value
+          double result = x;
+          if (x >= 1 && x < 10) {
+            std::cout << "Use the table to help find an initial value " << std::endl;
+            result = sqrtTable[static_cast<int>(x)];
+          }
+
+          // do ten iterations
+          for (int i = 0; i < 10; ++i) {
+            if (result <= 0) {
+              result = 0.1;
+            }
+            double delta = x - (result * result);
+            result = result + 0.5 * delta / result;
+            std::cout << "Computing sqrt of " << x << " to be " << result << std::endl;
+          }
+
+          return result;
+    	}
+    }
+}
+```
+
+最后，更新`MathFunctions/MathFunctions.h`以使用dll导出定义:
+
+**MathFunctions/MathFunctions.h**
+
+```c++
+#if defined(_WIN32)
+#  if defined(EXPORTING_MYMATH)
+#    define DECLSPEC __declspec(dllexport)
+#  else
+#    define DECLSPEC __declspec(dllimport)
+#  endif
+#else // non windows
+#  define DECLSPEC
+#endif
+
+namespace mathfunctions {
+double DECLSPEC sqrt(double x);
+}
+```
+
+此时，如果您构建了所有代码，您可能会注意到链接失败，因为我们将一个没有位置独立代码的静态库与一个具有位置独立代码的库组合在一起。解决这个问题的方法是`POSITION_INDEPENDENT_CODE将SqrtLibrary`目标属性设置为True，而不管构建type是什么
+
+**MathFunctions/CMakeLists.txt**
+
+```cmake
+  # state that SqrtLibrary need PIC when the default is shared libraries
+  set_target_properties(SqrtLibrary PROPERTIES
+                        POSITION_INDEPENDENT_CODE ${BUILD_SHARED_LIBS}
+                        )
+
+  target_link_libraries(MathFunctions PRIVATE SqrtLibrary)
+```
+
