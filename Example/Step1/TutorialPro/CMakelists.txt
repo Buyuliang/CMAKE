@@ -1,8 +1,8 @@
 
-set(CMAKE_C_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")#  
+set(CMAKE_C_FLAGS "-g -Wall  -I D:\\ARM\\mingw64\\include -L D:\\mingw64\\lib")
   
 set(CMAKE_CXX_COMPILER "g++")#设置C++编译器  
-set(CMAKE_CXX_FLAGS "-g -Wall  -I D:\\mingw64\\include -L D:\\mingw64\\lib")  
+set(CMAKE_CXX_FLAGS "-g -Wall  -I D:\\ARM\\mingw64\\include -L D:\\mingw64\\lib")  
   
 # 设置 cmake 最小版本号
 cmake_minimum_required(VERSION 3.10)
